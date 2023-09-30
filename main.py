@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import csv
+import pandas as pd
 
 # Function to calculate the eye aspect ratio
 def calculate_eye_aspect_ratio(eye):
@@ -22,7 +23,7 @@ frame_width = int(video_capture.get(3))
 frame_height = int(video_capture.get(4))
 
 # Initialize video writer for the output video in MP4 format
-fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Use 'XVID' codec for AVI format
+fourcc = cv2.VideoWriter_fourcc(*'XVID')
 out = cv2.VideoWriter('output_video.avi', fourcc, 20.0, (frame_width, frame_height))
 
 # Initialize variables
@@ -30,11 +31,11 @@ eye_threshold = 0.20
 frame_count = 0
 eye_closed_frames = 0
 
-# Create a CSV file for storing eye status
-csv_filename = 'eye_status.csv'
+# Create a CSV file for storing EAR values
+csv_filename = 'ear_values.csv'
 with open(csv_filename, 'w', newline='') as csv_file:
     csv_writer = csv.writer(csv_file)
-    csv_writer.writerow(['Frame', 'Eye Status'])  # Write header row
+    csv_writer.writerow(['EAR'])  # Write header row
 
     while True:
         ret, frame = video_capture.read()
@@ -65,6 +66,9 @@ with open(csv_filename, 'w', newline='') as csv_file:
                 # Debugging: Print EAR values
                 print(f"EAR: {ear}")
 
+                # Write the EAR value to the CSV file
+                csv_writer.writerow([ear])
+
                 # Detect closed eyes
                 if ear < eye_threshold:
                     eye_closed_frames += 1
@@ -83,9 +87,6 @@ with open(csv_filename, 'w', newline='') as csv_file:
 
                 # Display the EAR value on the frame (top-right corner)
                 cv2.putText(frame, f"Rasio: {ear:.2f}", (frame_width - 120, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-                # Write the eye status to the CSV file
-                csv_writer.writerow([frame_count, eye_status])  # Write frame number and eye status
 
             # Draw a frame around the detected face
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
