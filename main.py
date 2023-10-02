@@ -30,12 +30,21 @@ out = cv2.VideoWriter('output_video.avi', fourcc, 20.0, (frame_width, frame_heig
 eye_threshold = 0.20
 frame_count = 0
 eye_closed_frames = 0
+total_eyes = 0
+open_eyes = 0
 
-# Create a CSV file for storing EAR values
+# Initialize text_y_closed and text_y_open variables
+text_y_closed = frame_height - 20
+text_y_open = text_y_closed - 30
+
+# Initialize an empty list to store data for open eyes ratio and eyes closed status
+data_list = []
+
+# Create a CSV file for storing open eyes ratio and eyes closed status
 csv_filename = 'ear_values.csv'
 with open(csv_filename, 'w', newline='') as csv_file:
     csv_writer = csv.writer(csv_file)
-    csv_writer.writerow(['EAR'])  # Write header row
+    csv_writer.writerow(['Eyes Closed Status', 'Open Eyes Ratio'])  # Write header row
 
     while True:
         ret, frame = video_capture.read()
@@ -57,36 +66,42 @@ with open(csv_filename, 'w', newline='') as csv_file:
             eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
             eyes = eye_cascade.detectMultiScale(roi_gray)
 
+            total_eyes += len(eyes)
+
             for (ex, ey, ew, eh) in eyes:
                 eye_roi = roi_gray[ey:ey + eh, ex:ex + ew]
 
                 # Calculate the eye aspect ratio
                 ear = calculate_eye_aspect_ratio(eye_roi)
 
-                # Debugging: Print EAR values
-                print(f"EAR: {ear}")
-
-                # Write the EAR value to the CSV file
-                csv_writer.writerow([ear])
-
                 # Detect closed eyes
                 if ear < eye_threshold:
                     eye_closed_frames += 1
                     eye_status = "Tired Eyes"
                 else:
+                    open_eyes += 1
                     eye_closed_frames = 0
                     eye_status = "Alert Eyes"
 
+                # Append the data for open eyes ratio and eyes closed status to the list
+                open_eyes_ratio = open_eyes / total_eyes if total_eyes > 0 else 0
+                data_list.append([eye_status, open_eyes_ratio])
+
                 # If eyes are closed for several consecutive frames, mark as closed
                 if eye_closed_frames >= 1:
-                    text = "Eyes Closed"
-                    text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
-                    text_x = frame_width - text_size[0] - 20
-                    text_y = frame_height - 20
-                    cv2.putText(frame, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+                    text_closed = f"Eyes Closed (Total: {total_eyes})"
+                    text_size_closed = cv2.getTextSize(text_closed, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
+                    text_x_closed = frame_width - text_size_closed[0] - 20
+                    cv2.putText(frame, text_closed, (text_x_closed, text_y_closed), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+
+                # Display the open eyes ratio above the "Eyes Closed" text
+                text_open = f"Open Eyes Ratio: {open_eyes_ratio:.2f}"
+                text_size_open = cv2.getTextSize(text_open, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
+                text_x_open = frame_width - text_size_open[0] - 20
+                cv2.putText(frame, text_open, (text_x_open, text_y_open), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
                 # Display the EAR value on the frame (top-right corner)
-                cv2.putText(frame, f"Rasio: {ear:.2f}", (frame_width - 120, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                cv2.putText(frame, f"Rasio: {ear:.2f}", (frame_width - 120, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
             # Draw a frame around the detected face
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
@@ -99,6 +114,13 @@ with open(csv_filename, 'w', newline='') as csv_file:
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+
+# Convert the list to a Pandas DataFrame
+data_df = pd.DataFrame(data_list, columns=['Eyes Closed Status', 'Open Eyes Ratio'])
+
+# Save the DataFrame as a CSV file
+csv_filename = 'ear_values.csv'
+data_df.to_csv(csv_filename, index=False)
 
 # Release video capture and writer, and close the window
 video_capture.release()
