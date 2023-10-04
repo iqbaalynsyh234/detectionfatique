@@ -5,11 +5,17 @@ import pandas as pd
 import time
 import collections
 
+
 # Function to calculate the eye fit ratio
 def calculate_eye_fit_ratio(eye):
     a = distance(eye[1], eye[5])
     b = distance(eye[2], eye[4])
     c = distance(eye[0], eye[3])
+    
+    # Avoid division by zero by adding a small epsilon value
+    epsilon = 1e-5
+    if c < epsilon:
+        return 0.0
     eye_fit_ratio = (a + b) / (2.0 * c)
     return eye_fit_ratio
 
@@ -18,6 +24,11 @@ def calculate_eye_aspect_ratio(eye):
     a = distance(eye[1], eye[5])
     b = distance(eye[2], eye[4])
     c = distance(eye[0], eye[3])
+
+    # Avoid division by zero by adding a small epsilon value
+    epsilon = 1e-5
+    if c < epsilon:
+        return 0.0
     ear = (a + b) / (2.0 * c)
     return ear
 
@@ -48,7 +59,7 @@ text_y_open = text_y_closed - 30
 threshold_to_record = 0.5  # Change this threshold as needed
 
 # Create a CSV file for storing open eyes ratio, eye fit ratio, and eyes closed status
-csv_filename = 'hasil_ratio_new.csv'
+csv_filename = 'hasil_ratio_coba.csv'
 with open(csv_filename, 'w', newline='') as csv_file:
     csv_writer = csv.writer(csv_file)
     csv_writer.writerow(['Eyes Status', 'Eye Ratio'])  # Write header row
