@@ -2,7 +2,8 @@ import cv2
 import numpy as np
 import csv
 import pandas as pd
-import time  # Import the time module for timestamp recording
+import time
+import collections
 
 # Function to calculate the eye fit ratio
 def calculate_eye_fit_ratio(eye):
@@ -38,7 +39,6 @@ out = cv2.VideoWriter('output_video.avi', fourcc, 20.0, (frame_width, frame_heig
 # Initialize variables
 eye_threshold = 0.20
 fit_ratio_threshold = 0.3  # Initial threshold for eye fit ratio
-fit_ratio_history = []  # List to store historical fit ratios
 
 # Initialize text_y_closed and text_y_open variables
 text_y_closed = frame_height - 20
@@ -56,6 +56,8 @@ with open(csv_filename, 'w', newline='') as csv_file:
     # Create a file to store timestamps
     timestamp_filename = 'timestamps.txt'
     with open(timestamp_filename, 'w') as timestamp_file:
+        # Initialize deque for storing historical eye fit ratios
+        fit_ratio_history = collections.deque(maxlen=10)  # Change the length as needed
         while True:
             ret, frame = video_capture.read()
             if not ret:
