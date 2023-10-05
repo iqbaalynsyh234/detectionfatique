@@ -4,8 +4,7 @@ import numpy as np
 import csv
 import pandas as pd
 import time
-import collections
-
+import collections # import library colection for zerro
 
 # Function to calculate the eye fit ratio
 def calculate_eye_fit_ratio(eye):
