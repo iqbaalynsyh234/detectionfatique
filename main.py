@@ -1,4 +1,4 @@
- # import python #
+# import libraries #
 import cv2
 import numpy as np
 import csv
@@ -40,14 +40,14 @@ frame_height = int(video_capture.get(4))
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
 out = cv2.VideoWriter('output_video.avi', fourcc, 20.0, (frame_width, frame_height))
 
-eye_threshold = 0.20
+eye_threshold = 0.20 # eye threshold
 fit_ratio_threshold = 0.8  # Mengubah threshold rasio mata
 eye_closed_ratio_threshold = 0.8
 
 text_y_closed = frame_height - 20
 text_y_open = text_y_closed - 30
 
-threshold_to_record = 0.5
+threshold_to_record = 0.8
 csv_filename = 'hasil_ratio_coba.csv' # export to csv file
 with open(csv_filename, 'w', newline='') as csv_file:
     csv_writer = csv.writer(csv_file)
@@ -56,6 +56,11 @@ with open(csv_filename, 'w', newline='') as csv_file:
     timestamp_filename = 'timestamps.txt'  # record timestamp format txt
     with open(timestamp_filename, 'w') as timestamp_file:
         fit_ratio_history = collections.deque(maxlen=10)
+        last_eye_closed_time = time.time()  # Track the time of last eye closure
+        eye_close_duration = 3  # 3 seconds
+        eye_open_duration = 1   # 1 second
+        eye_status = "Eye open"  # Initialize eye status
+
         while True:
             ret, frame = video_capture.read()
             if not ret:
@@ -98,11 +103,8 @@ with open(csv_filename, 'w', newline='') as csv_file:
                 eye_closed_ratio = closed_eyes / total_eyes if total_eyes > 0 else 0
                 eye_fit_ratio = sum(eye_fit_ratios) / total_eyes if total_eyes > 0 else 0
 
-                text_eye_closed = f"Eye Closed Ratio: {eye_closed_ratio:.2f}"
-                text_eye_fit = f"Eye Fit Ratio: {eye_fit_ratio:.2f}"
-
-                cv2.putText(frame, text_eye_closed, (frame_width - 220, text_y_closed), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
-                cv2.putText(frame, text_eye_fit, (frame_width - 220, text_y_open), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+                text_eye_status = f"Eye Status: {eye_status}"
+                cv2.putText(frame, text_eye_status, (frame_width - 220, text_y_closed), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
                 csv_writer.writerow([eye_status, eye_fit_ratio])
 
