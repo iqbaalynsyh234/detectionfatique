@@ -1,10 +1,11 @@
+ # import python #
 import cv2
 import numpy as np
 import csv
 import collections
 import time
 
-# Function to calculate the eye fit ratio
+# Function to calculate the eye fit ratio #
 def calculate_eye_fit_ratio(eye):
     a = distance(eye[1], eye[5])
     b = distance(eye[2], eye[4])
@@ -16,7 +17,7 @@ def calculate_eye_fit_ratio(eye):
     eye_fit_ratio = (a + b) / (2.0 * c)
     return eye_fit_ratio
 
-# Function to calculate the eye aspect ratio
+# Function to calculate the eye aspect ratio 
 def calculate_eye_aspect_ratio(eye):
     a = distance(eye[1], eye[5])
     b = distance(eye[2], eye[4])
@@ -32,7 +33,7 @@ def calculate_eye_aspect_ratio(eye):
 def distance(point1, point2):
     return np.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
 
-video_capture = cv2.VideoCapture('VID-1-fatique.mp4')
+video_capture = cv2.VideoCapture('VID-1-fatique.mp4') # input capt
 frame_width = int(video_capture.get(3))
 frame_height = int(video_capture.get(4))
 
@@ -47,12 +48,12 @@ text_y_closed = frame_height - 20
 text_y_open = text_y_closed - 30
 
 threshold_to_record = 0.5
-csv_filename = 'hasil_ratio_coba.csv'
+csv_filename = 'hasil_ratio_coba.csv' # export to csv file
 with open(csv_filename, 'w', newline='') as csv_file:
     csv_writer = csv.writer(csv_file)
     csv_writer.writerow(['Eyes Status', 'Eye Ratio'])
 
-    timestamp_filename = 'timestamps.txt'
+    timestamp_filename = 'timestamps.txt'  # record timestamp format txt
     with open(timestamp_filename, 'w') as timestamp_file:
         fit_ratio_history = collections.deque(maxlen=10)
         while True:
@@ -62,8 +63,8 @@ with open(csv_filename, 'w', newline='') as csv_file:
 
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml') # function load model 
+            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30)) # batas faces frame min size frame ear
 
             for (x, y, w, h) in faces:
                 roi_gray = gray[y:y + h, x:x + w]
