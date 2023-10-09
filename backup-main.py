@@ -1,13 +1,31 @@
+# Import libraries
 import cv2
 import numpy as np
 import csv
-import pandas as pd
+import collections
+import time
+
+# Function to calculate the eye fit ratio
+def calculate_eye_fit_ratio(eye):
+    a = distance(eye[1], eye[5])
+    b = distance(eye[2], eye[4])
+    c = distance(eye[0], eye[3])
+
+    epsilon = 1e-5
+    if c < epsilon:
+        return 0.0
+    eye_fit_ratio = (a + b) / (2.0 * c)
+    return eye_fit_ratio
 
 # Function to calculate the eye aspect ratio
 def calculate_eye_aspect_ratio(eye):
     a = distance(eye[1], eye[5])
     b = distance(eye[2], eye[4])
     c = distance(eye[0], eye[3])
+
+    epsilon = 1e-5
+    if c < epsilon:
+        return 0.0
     ear = (a + b) / (2.0 * c)
     return ear
 
@@ -15,108 +33,109 @@ def calculate_eye_aspect_ratio(eye):
 def distance(point1, point2):
     return np.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
 
-# Initialize video capture
-video_capture = cv2.VideoCapture('VID-1-fatique.mp4')
-
-# Get video properties
+video_capture = cv2.VideoCapture('VID-1-fatique.mp4')  # Input video capture
 frame_width = int(video_capture.get(3))
 frame_height = int(video_capture.get(4))
 
-# Initialize video writer for the output video in MP4 format
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
 out = cv2.VideoWriter('output_video.avi', fourcc, 20.0, (frame_width, frame_height))
 
-# Initialize variables
-eye_threshold = 0.20
-frame_count = 0
-eye_closed_frames = 0
-total_eyes = 0
-open_eyes = 0
+eye_threshold = 0.20  # Eye threshold
+fit_ratio_threshold = 0.8  # Threshold for eye fit ratio
+eye_closed_ratio_threshold = 0.8
 
-# Initialize text_y_closed and text_y_open variables
 text_y_closed = frame_height - 20
 text_y_open = text_y_closed - 30
 
-# Initialize an empty list to store data for open eyes ratio and eyes closed status
-data_list = []
+threshold_to_record = 0.8
+csv_filename = 'hasil_ratio_coba.csv'  # Export to CSV file
+with open(csv_filename, 'w', newline='') as csv_file:
+    csv_writer = csv.writer(csv_file)
+    csv_writer.writerow(['Eyes Status', 'Eye Ratio'])
 
-while True:
-    ret, frame = video_capture.read()
-    if not ret:
-        break
+    timestamp_filename = 'timestamps.txt'  # Record timestamp in txt format
+    with open(timestamp_filename, 'w') as timestamp_file:
+        fit_ratio_history = collections.deque(maxlen=10)
+        last_eye_closed_time = time.time()  # Track the time of last eye closure
+        eye_close_duration = 3  # 3 seconds
+        eye_open_duration = 1  # 1 second
+        eye_status = "Eye open"  # Initialize eye status
 
-    # Convert the frame to grayscale
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        last_eye_status_time = time.time()  # Track the time for adding "Eye close" and "Eye fit" text
+        eye_status_text = ""  # Initialize eye status text
 
-    # Detect faces in the frame
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+        while True:
+            ret, frame = video_capture.read()
+            if not ret:
+                break
 
-    for (x, y, w, h) in faces:
-        # Get the region of interest (ROI) for the face
-        roi_gray = gray[y:y + h, x:x + w]
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        # Detect eyes in the ROI
-        eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
-        eyes = eye_cascade.detectMultiScale(roi_gray)
+            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')  # Load face detection model
+            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))  # Face detection parameters
 
-        total_eyes += len(eyes)
+            for (x, y, w, h) in faces:
+                roi_gray = gray[y:y + h, x:x + w]
 
-        for (ex, ey, ew, eh) in eyes:
-            eye_roi = roi_gray[ey:ey + eh, ex:ex + ew]
+                eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
+                eyes = eye_cascade.detectMultiScale(roi_gray)
 
-            # Calculate the eye aspect ratio
-            ear = calculate_eye_aspect_ratio(eye_roi)
+                eye_fit_ratios = []
+                eye_closed_statuses = []
 
-            # Detect closed eyes
-            if ear < eye_threshold:
-                eye_closed_frames += 1
-                eye_status = "Tired Eyes"
-            else:
-                open_eyes += 1
-                eye_closed_frames = 0
-                eye_status = "Alert Eyes"
+                for (ex, ey, ew, eh) in eyes:
+                    eye_roi = roi_gray[ey:ey + eh, ex:ex + ew]
 
-            # If eyes are closed for several consecutive frames, mark as closed
-            if eye_closed_frames >= 1:
-                text_closed = f"Eyes Closed (Total: {total_eyes})"
-                text_size_closed = cv2.getTextSize(text_closed, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
-                text_x_closed = frame_width - text_size_closed[0] - 20
-                cv2.putText(frame, text_closed, (text_x_closed, text_y_closed), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+                    ear = calculate_eye_aspect_ratio(eye_roi)
+                    fit_ratio = calculate_eye_fit_ratio(eye_roi)
 
-            # Display the open eyes ratio above the "Eyes Closed" text
-            text_open = f"Open Eyes Ratio: {open_eyes / total_eyes:.2f}"
-            text_size_open = cv2.getTextSize(text_open, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
-            text_x_open = frame_width - text_size_open[0] - 20
-            cv2.putText(frame, text_open, (text_x_open, text_y_open), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+                    if ear < eye_threshold or fit_ratio < fit_ratio_threshold:
+                        eye_status = "Eye close"
+                    else:
+                        eye_status = "Fit Eye"
 
-            # Display the EAR value on the frame (top-right corner)
-            cv2.putText(frame, f"Rasio: {ear:.2f}", (frame_width - 120, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    eye_fit_ratios.append(fit_ratio)
+                    eye_closed_statuses.append(eye_status)
 
-        # Draw a frame around the detected face
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                total_eyes = len(eye_closed_statuses)
+                closed_eyes = eye_closed_statuses.count("Eye close")
+                open_eyes = total_eyes - closed_eyes
 
-    # Append the data for open eyes ratio and eyes closed status to the list for each frame
-    open_eyes_ratio = open_eyes / total_eyes if total_eyes > 0 else 0
-    data_list.append([eye_status, open_eyes_ratio])
+                eye_closed_ratio = closed_eyes / total_eyes if total_eyes > 0 else 0
+                eye_fit_ratio = sum(eye_fit_ratios) / total_eyes if total_eyes > 0 else 0
 
-    # Write the frame to the output video
-    out.write(frame)
+                text_eye_status = f"Eye Status: {eye_status}"
+                cv2.putText(frame, text_eye_status, (frame_width - 220, text_y_closed), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
-    # Show the frame
-    cv2.imshow('Video', frame)
+                csv_writer.writerow([eye_status, eye_fit_ratio])
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+                if eye_fit_ratio > threshold_to_record:
+                    timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+                    timestamp_file.write(f'{timestamp}: Eye Fit Ratio crossed the threshold ({eye_fit_ratio:.2f})\n')
 
-# Convert the list to a Pandas DataFrame
-data_df = pd.DataFrame(data_list, columns=['Eyes Closed Status', 'Open Eyes Ratio'])
+                fit_ratio_history.append(eye_fit_ratio)
+                fit_ratio_threshold = np.mean(fit_ratio_history)
 
-# Save the DataFrame as a CSV file
-csv_filename = 'ear_values.csv'
-data_df.to_csv(csv_filename, index=False)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-# Release video capture and writer, and close the window
+            out.write(frame)
+            cv2.imshow('Video', frame)
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+            # Add "Eye close" and "Eye fit" text every 2 seconds
+            current_time = time.time()
+            if current_time - last_eye_status_time >= 2:
+                last_eye_status_time = current_time
+                text_eye_close = "Eye close" if eye_status == "Eye close" else ""
+                text_eye_fit = "Eye fit" if eye_status == "Fit Eye" else ""
+                cv2.putText(frame, text_eye_close, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                cv2.putText(frame, text_eye_fit, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+
+            # Add timestamp text every 2 seconds
+            timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+            cv2.putText(frame, f'Timestamp: {timestamp}', (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 video_capture.release()
 out.release()
 cv2.destroyAllWindows()
