@@ -57,8 +57,8 @@ with open(csv_filename, 'w', newline='') as csv_file:
     with open(timestamp_filename, 'w') as timestamp_file:
         fit_ratio_history = collections.deque(maxlen=10)
         last_eye_closed_time = time.time()  # Track the time of last eye closure
-        eye_close_duration = 3  # 3 seconds
-        eye_open_duration = 1  # 1 second
+        eye_close_duration = 2  # Change to 2 seconds for eye close detection
+        eye_open_duration = 2  # Change to 2 seconds for eye fit detection
         eye_status = "Eye open"  # Initialize eye status
 
         last_eye_status_time = time.time()  # Track the time for adding "Eye close" and "Eye fit" text
@@ -113,15 +113,15 @@ with open(csv_filename, 'w', newline='') as csv_file:
                 eye_fit_ratio = sum(eye_fit_ratios) / total_eyes if total_eyes > 0 else 0
 
                 # Calculate elapsed time for "Eye Fit" and "Eye Close"
-                elapsed_time_fit = int(time.time() - last_eye_open_time) if eye_status == "Fit Eye" else 0
-                elapsed_time_close = int(time.time() - last_eye_closed_time) if eye_status == "Eye close" else 0
+                elapsed_time_fit = int((time.time() - last_eye_open_time) * 1000) if eye_status == "Fit Eye" else 0
+                elapsed_time_close = int((time.time() - last_eye_closed_time) * 1000) if eye_status == "Eye close" else 0
 
-                # Add "Elapsed Time" text
-                cv2.putText(frame, f'Elapsed Time - Fit Eye: {elapsed_time_fit} sec', (frame_width - 220, text_y_closed - 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
-                cv2.putText(frame, f'Elapsed Time - Eye Close: {elapsed_time_close} sec', (frame_width - 220, text_y_closed - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+                # Add "Elapsed Time" text in milliseconds (ms) second (s)
+                cv2.putText(frame, f'Elapsed Time - Fit Eye: {elapsed_time_fit} ms', (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+                cv2.putText(frame, f'Elapsed Time - Eye Close: {elapsed_time_close} ms', (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
                 # Add "Eye Status" text
-                cv2.putText(frame, f'Eye Status: {eye_status}', (frame_width - 220, text_y_closed), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+                cv2.putText(frame, f'Eye Status: {eye_status}', (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
                 csv_writer.writerow([eye_status, eye_fit_ratio])
 
@@ -133,6 +133,10 @@ with open(csv_filename, 'w', newline='') as csv_file:
                 fit_ratio_threshold = np.mean(fit_ratio_history)
 
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+                # Write elapsed times to a text file
+                with open('elapsed_times.txt', 'a') as elapsed_times_file:
+                    elapsed_times_file.write(f'Elapsed Time - Fit Eye: {elapsed_time_fit} ms, Elapsed Time - Eye Close: {elapsed_time_close} ms\n')
 
             out.write(frame)
             cv2.imshow('Video', frame)
