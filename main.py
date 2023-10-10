@@ -1,9 +1,9 @@
 # Import libraries
 import cv2
 import numpy as np
-import csv
+import csv 
 import collections
-import time
+import time # library time export by time stamp
 
 # Function to calculate the eye fit ratio
 def calculate_eye_fit_ratio(eye):
@@ -38,7 +38,7 @@ frame_width = int(video_capture.get(3))
 frame_height = int(video_capture.get(4))
 
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
-out = cv2.VideoWriter('output_video.avi', fourcc, 20.0, (frame_width, frame_height))
+out = cv2.VideoWriter('output_video.avi', fourcc, 20.0, (frame_width, frame_height)) # export output video format XVID
 
 eye_threshold = 0.20  # Eye threshold
 fit_ratio_threshold = 0.8  # Threshold for eye fit ratio
@@ -90,7 +90,6 @@ with open(csv_filename, 'w', newline='') as csv_file:
 
                     ear = calculate_eye_aspect_ratio(eye_roi)
                     fit_ratio = calculate_eye_fit_ratio(eye_roi)
-
                     if ear < eye_threshold or fit_ratio < fit_ratio_threshold:
                         eye_status = "Eye close"
                         last_eye_closed_time = time.time()
@@ -112,11 +111,11 @@ with open(csv_filename, 'w', newline='') as csv_file:
                 eye_closed_ratio = closed_eyes / total_eyes if total_eyes > 0 else 0
                 eye_fit_ratio = sum(eye_fit_ratios) / total_eyes if total_eyes > 0 else 0
 
-                # Calculate elapsed time for "Eye Fit" and "Eye Close"
+                # Calculate elapsed time for "Eye Fit" and "Eye Close" #
                 elapsed_time_fit = int((time.time() - last_eye_open_time) * 1000) if eye_status == "Fit Eye" else 0
                 elapsed_time_close = int((time.time() - last_eye_closed_time) * 1000) if eye_status == "Eye close" else 0
 
-                # Add "Elapsed Time" text in milliseconds (ms) second (s)
+                # Add "Elapsed Time eye fit and eye close" text in milliseconds (ms) second (s)
                 cv2.putText(frame, f'Elapsed Time - Fit Eye: {elapsed_time_fit} ms', (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
                 cv2.putText(frame, f'Elapsed Time - Eye Close: {elapsed_time_close} ms', (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
@@ -136,7 +135,7 @@ with open(csv_filename, 'w', newline='') as csv_file:
 
                 # Write elapsed times to a text file
                 with open('elapsed_times.txt', 'a') as elapsed_times_file:
-                    elapsed_times_file.write(f'Elapsed Time - Fit Eye: {elapsed_time_fit} ms, Elapsed Time - Eye Close: {elapsed_time_close} ms\n')
+                    elapsed_times_file.write(f'Elapsed Time - Fit Eye: {elapsed_time_fit} ms,  Elapsed Time - Eye Close: {elapsed_time_close} ms\n')
 
             out.write(frame)
             cv2.imshow('Video', frame)
